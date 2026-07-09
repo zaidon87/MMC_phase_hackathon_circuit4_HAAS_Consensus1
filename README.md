@@ -11,8 +11,6 @@ The goal is to move from a Simulink-only MMC prototype toward a professional rep
 - MATLAB/Simulink model review,
 - extracted controller source-code review,
 - OwnTech/Twist embedded migration,
-- GitHub issue tracking,
-- reproducible documentation for PhD work and CARROTS-style experiments.
 
 ## Repository layout
 
@@ -114,7 +112,7 @@ This avoids centralized global sorting and prepares the control law for distribu
 - RS485 reception and relay logic,
 - setup/background/critical tasks,
 - NLM reference generation,
-- local-rank gate selection for the upper arm,
+- local-consensus  gate selection for the upper arm,
 - safety transition logic.
 
 Reusable C/C++ pieces are also split into headers:
