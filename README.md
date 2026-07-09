@@ -22,12 +22,15 @@ MMC_phase_hackathon_circuit4_HAAS_Consensus1
 ├── .vscode/                     VS Code settings for OwnTech + MATLAB work
 ├── MMC_documentation/           Academic documentation and control notes
 ├── MMC_models/                  Original and derived Simulink models
-├── docs/                        Repository, reproducibility, and roadmap notes
+├── docs/                        Repository, reproducibility, build, and validation notes
 ├── models/                      Optional simplified / derived model folder
 ├── owntech/                     OwnTech PlatformIO support placeholders
 ├── src/
 │   ├── main.cpp                 OwnTech-style embedded entry point
 │   ├── app.ini                  Application configuration included by PlatformIO
+│   ├── mmc_config.hpp           MMC constants, module IDs, gains, safety limits
+│   ├── mmc_frame.hpp            RS485 frame packing/unpacking helpers
+│   ├── mmc_local_rank.hpp       Local-rank / neighbor-consensus helper functions
 │   └── matlab/                  Extracted MATLAB controller source and tests
 ├── zephyr/                      Zephyr configuration placeholder
 ├── LICENSE
@@ -50,6 +53,7 @@ The repository follows the OwnTech-style workflow:
 
 ```bash
 pio run
+pio run -e native
 pio run -e USB
 pio run -e STLink
 ```
@@ -61,6 +65,12 @@ board = spin
 board_version = 1_2_0
 board_shield = twist
 board_shield_version = 1_4_2
+```
+
+Detailed build steps are documented in:
+
+```text
+docs/build-and-test-owntech.md
 ```
 
 ## Working with MATLAB / Simulink
@@ -94,15 +104,26 @@ This avoids centralized global sorting and prepares the control law for distribu
 
 ## Embedded direction
 
-`src/main.cpp` is an OwnTech-style skeleton. It contains:
+`src/main.cpp` is the OwnTech-style firmware prototype. It contains:
 
 - OwnTech API includes,
 - board/module identification constants,
 - MMC status definitions,
 - compact communication frame structure,
 - capacitor-voltage/current encode-decode helpers,
-- placeholder setup/background/critical tasks,
-- local-rank correction function compatible with future hardware integration.
+- RS485 reception and relay logic,
+- setup/background/critical tasks,
+- NLM reference generation,
+- local-rank gate selection for the upper arm,
+- safety transition logic.
+
+Reusable C/C++ pieces are also split into headers:
+
+```text
+src/mmc_config.hpp
+src/mmc_frame.hpp
+src/mmc_local_rank.hpp
+```
 
 ## Important technical note
 
@@ -112,10 +133,20 @@ The uploaded Simulink model was detected as MATLAB/Simulink R2024a and contains 
 src/matlab/utils/get_neighbors_parameterized.m
 ```
 
+## Validation documents
+
+```text
+docs/build-and-test-owntech.md
+docs/hardware-validation-checklist.md
+docs/analuhaas-mmc-integration-notes.md
+```
+
 ## Recommended next work
 
 1. Confirm the original `.slx` is committed under `MMC_models/original/`.
-2. Replace hardcoded neighbor lookup in Simulink with the parameterized implementation.
-3. Validate nominal, imbalance, and load-step experiments.
-4. Compare centralized sorting, neighbor consensus, and local-rank correction.
-5. Map the validated controller to `src/main.cpp` for OwnTech/Twist experiments.
+2. Run `pio run -e native` to catch basic C++ syntax issues.
+3. Run `pio run -e USB` inside the complete OwnTech environment.
+4. Replace hardcoded neighbor lookup in Simulink with the parameterized implementation.
+5. Validate nominal, imbalance, and load-step experiments.
+6. Compare centralized sorting, neighbor consensus, and local-rank correction.
+7. Test low-voltage hardware only after the checklist is complete.
