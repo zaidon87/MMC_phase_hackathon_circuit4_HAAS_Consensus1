@@ -1,12 +1,12 @@
 /*
- * MMC Local-Rank Neighbor Control - OwnTech/Twist firmware prototype
+ * MMC Local Consensus Control - OwnTech/Twist firmware prototype
  *
  * Copyright (c) 2026 Zaid Jabbar
  * SPDX-License-Identifier: MIT
  *
  * This file keeps the OwnTech-style single-entry layout used in the reference
- * MMC firmware while integrating the Simulink neighbor-consensus/local-rank
- * balancing idea developed in this repository.
+ * MMC firmware while integrating the Simulink neighbor-consensus / Local
+ * Consensus balancing idea developed in this repository.
  */
 
 /**
@@ -16,7 +16,7 @@
  * - one lead board generates the NLM insertion command,
  * - follower boards relay RS485 frames in a ring,
  * - every frame carries capacitor voltage, arm current, status, and insertion bits,
- * - the lead computes local-neighbor balancing priorities from the measured vector,
+ * - the lead computes Local Consensus priorities from the measured neighbor voltages,
  * - each follower applies the insertion bit assigned to its module ID.
  *
  * This is a bridge between the Simulink model and the real OwnTech/Twist setup.
@@ -50,54 +50,9 @@ using float32_t = float;
 #include <math.h>
 #include <inttypes.h>
 
-#ifndef __packed
-#define __packed __attribute__((packed))
-#endif
-
-/* -------------- MMC module identifiers ------------------------ */
-#define MMC_LEAD 0
-#define MMC_SM1  1
-#define MMC_SM2  2
-#define MMC_SM3  3
-#define MMC_SM4  4
-#define MMC_SM5  5
-#define MMC_SM6  6
-#define MMC_SM7  7
-#define MMC_SM8  8
-#define MMC_SM9  9
-#define MMC_SM10 10
-
-/* -------------- MMC status values ----------------------------- */
-#define IDLE          0
-#define POWER         1
-#define LEAD_ERROR    2
-#define OVER_VOLTAGE  3
-#define UNDER_VOLTAGE 4
-#define OVER_CURRENT  5
-
-constexpr uint8_t MMC_SM_COUNT = 10;
-constexpr uint8_t MMC_SM_FIRST = MMC_SM1;
-constexpr uint8_t MMC_SM_LAST  = MMC_SM10;
-constexpr uint8_t MMC_ARM_MODULES = 5;
-
-/* -------------- General MMC definitions ----------------------- */
-static const float32_t f0 = 50.0F;                 /* Output frequency [Hz] */
-static const float32_t Vcap_expected = 80.0F;      /* Expected capacitor voltage [V] */
-static const float32_t i_expected = 10.0F;         /* Expected arm-current amplitude [A] */
-static const float32_t overvoltage_tolerance = 95.0F;
-static const float32_t undervoltage_tolerance = 5.0F;
-static const float32_t overcurrent_tolerance = 8.0F;
-static const float32_t MMC_PI = 3.14159265358979323846F;
-
-/* Critical task period: 100 us, matching the reference OwnTech prototype. */
-static const uint32_t control_task_period_us = 100U;
-static const float32_t Ts = static_cast<float32_t>(control_task_period_us) * 1e-6F;
-
-/* -------------- Local-rank controller parameters -------------- */
-static const float32_t k_v = 0.2F;
-static const float32_t k_rank = 0.02F;
-static const float32_t voltage_deadband = 0.1F;
-static const float32_t current_scale = 1.0F;
+#include "mmc_config.hpp"
+#include "mmc_frame.hpp"
+#include "mmc_local_consensus.hpp"
 
 /* -------------- Board identification placeholders ------------- */
 constexpr uint32_t UID_MMC_LEAD_BOARD = 0x002B002A;
@@ -111,6 +66,9 @@ constexpr uint32_t UID_MMC_SM7_BOARD  = 0x11119999;
 constexpr uint32_t UID_MMC_SM8_BOARD  = 0x1111AAA0;
 constexpr uint32_t UID_MMC_SM9_BOARD  = 0x1111BBB1;
 constexpr uint32_t UID_MMC_SM10_BOARD = 0x1111CCC2;
+
+static const float32_t Ts = static_cast<float32_t>(MMC_CONTROL_TASK_PERIOD_US) * 1e-6F;
+static const float32_t w0 = 2.0F * MMC_PI_F * MMC_OUTPUT_FREQUENCY_HZ;
 
 static uint32_t read_board_uid()
 {
@@ -140,159 +98,6 @@ static uint8_t detect_module_id()
     case UID_MMC_SM10_BOARD: return MMC_SM10;
     default:                return MMC_SM1;
     }
-}
-
-/* -------------- Compact transport encoding -------------------- */
-constexpr float32_t Cap_voltage_SCALE = Vcap_expected * 2.0F;
-constexpr float32_t Arm_current_SCALE = i_expected * 2.0F;
-constexpr float32_t Arm_current_OFFSET = i_expected;
-
-static inline uint16_t mmc_encode_voltage(float32_t voltage)
-{
-    int32_t raw = static_cast<int32_t>((voltage * 4095.0F) / Cap_voltage_SCALE);
-    if (raw < 0) raw = 0;
-    if (raw > 0x0FFF) raw = 0x0FFF;
-    return static_cast<uint16_t>(raw);
-}
-
-static inline float32_t mmc_decode_voltage(uint16_t raw)
-{
-    return (Cap_voltage_SCALE * static_cast<float32_t>(raw & 0x0FFFU)) / 4095.0F;
-}
-
-static inline uint16_t mmc_encode_current(float32_t current)
-{
-    const float32_t shifted = current + Arm_current_OFFSET;
-    int32_t raw = static_cast<int32_t>((shifted * 4095.0F) / Arm_current_SCALE);
-    if (raw < 0) raw = 0;
-    if (raw > 0x0FFF) raw = 0x0FFF;
-    return static_cast<uint16_t>(raw);
-}
-
-static inline float32_t mmc_decode_current(uint16_t raw)
-{
-    return ((Arm_current_SCALE * static_cast<float32_t>(raw & 0x0FFFU)) / 4095.0F)
-           - Arm_current_OFFSET;
-}
-
-/* -------------- MMC communication frame ----------------------- */
-constexpr uint8_t MMC_STATUS_CODE_BITS = 3;
-constexpr uint32_t MMC_STATUS_CODE_MASK = (1UL << MMC_STATUS_CODE_BITS) - 1U;
-constexpr uint32_t MMC_STATUS_UPPER_ARM_MASK = (1UL << MMC_STATUS_CODE_BITS);
-
-struct MMC_frame
-{
-    union
-    {
-        uint16_t raw;
-        struct
-        {
-            uint16_t sm1_inserted  : 1;
-            uint16_t sm2_inserted  : 1;
-            uint16_t sm3_inserted  : 1;
-            uint16_t sm4_inserted  : 1;
-            uint16_t sm5_inserted  : 1;
-            uint16_t sm6_inserted  : 1;
-            uint16_t sm7_inserted  : 1;
-            uint16_t sm8_inserted  : 1;
-            uint16_t sm9_inserted  : 1;
-            uint16_t sm10_inserted : 1;
-        } bits;
-    } sm_insertion;
-
-    uint16_t capacitor_voltage_raw : 12;
-    uint16_t arm_current_raw       : 12;
-
-    union
-    {
-        uint8_t raw;
-        struct
-        {
-            uint8_t status_code     : MMC_STATUS_CODE_BITS;
-            uint8_t upper_arm_frame : 1;
-        } bits;
-    } status;
-
-    uint8_t sm_id;
-} __packed;
-
-typedef MMC_frame MMC_frame_t;
-
-static inline void mmc_frame_set_voltage_raw(MMC_frame_t &frame, uint16_t raw)
-{
-    frame.capacitor_voltage_raw = static_cast<uint16_t>(raw & 0x0FFFU);
-}
-
-static inline uint16_t mmc_frame_get_voltage_raw(const MMC_frame_t &frame)
-{
-    return static_cast<uint16_t>(frame.capacitor_voltage_raw & 0x0FFFU);
-}
-
-static inline void mmc_frame_set_current_raw(MMC_frame_t &frame, uint16_t raw)
-{
-    frame.arm_current_raw = static_cast<uint16_t>(raw & 0x0FFFU);
-}
-
-static inline uint16_t mmc_frame_get_current_raw(const MMC_frame_t &frame)
-{
-    return static_cast<uint16_t>(frame.arm_current_raw & 0x0FFFU);
-}
-
-static inline void mmc_frame_set_sm_identifier(MMC_frame_t &frame, uint8_t id)
-{
-    frame.sm_id = id;
-}
-
-static inline uint8_t mmc_frame_get_sm_identifier(const MMC_frame_t &frame)
-{
-    return frame.sm_id;
-}
-
-static inline void mmc_frame_set_status_code(MMC_frame_t &frame, uint8_t status_code)
-{
-    frame.status.raw &= static_cast<uint8_t>(~MMC_STATUS_CODE_MASK);
-    frame.status.raw |= static_cast<uint8_t>(status_code & MMC_STATUS_CODE_MASK);
-}
-
-static inline uint8_t mmc_frame_get_status_code(const MMC_frame_t &frame)
-{
-    return static_cast<uint8_t>(frame.status.raw & MMC_STATUS_CODE_MASK);
-}
-
-static inline void mmc_frame_set_upper_arm_flag(MMC_frame_t &frame, bool is_upper_arm)
-{
-    if (is_upper_arm) frame.status.raw |= static_cast<uint8_t>(MMC_STATUS_UPPER_ARM_MASK);
-    else frame.status.raw &= static_cast<uint8_t>(~MMC_STATUS_UPPER_ARM_MASK);
-}
-
-static inline bool mmc_frame_is_upper_arm(const MMC_frame_t &frame)
-{
-    return (frame.status.raw & MMC_STATUS_UPPER_ARM_MASK) != 0U;
-}
-
-static inline void mmc_frame_set_sm_inserted(MMC_frame_t &frame, uint8_t sm_index, bool inserted)
-{
-    if (sm_index < MMC_SM_FIRST || sm_index > MMC_SM_LAST) return;
-    const uint8_t shift = static_cast<uint8_t>(sm_index - MMC_SM_FIRST);
-    const uint16_t mask = static_cast<uint16_t>(1U << shift);
-    if (inserted) frame.sm_insertion.raw |= mask;
-    else frame.sm_insertion.raw &= static_cast<uint16_t>(~mask);
-}
-
-static inline bool mmc_frame_get_sm_inserted(const MMC_frame_t &frame, uint8_t sm_index)
-{
-    if (sm_index < MMC_SM_FIRST || sm_index > MMC_SM_LAST) return false;
-    const uint8_t shift = static_cast<uint8_t>(sm_index - MMC_SM_FIRST);
-    const uint16_t mask = static_cast<uint16_t>(1U << shift);
-    return (frame.sm_insertion.raw & mask) != 0U;
-}
-
-static inline bool mmc_is_upper_arm_module(uint8_t id)
-{
-    if (id == MMC_LEAD) return true;
-    if (id < MMC_SM_FIRST || id > MMC_SM_LAST) return false;
-    const uint8_t offset = static_cast<uint8_t>(id - MMC_SM_FIRST);
-    return offset < MMC_ARM_MODULES;
 }
 
 /* -------------- Runtime variables ----------------------------- */
@@ -334,18 +139,17 @@ static uint32_t counter_timer = 0U;
 static uint32_t counter_receive = 0U;
 static uint32_t critical_task_timer = 0U;
 
-/* NLM / local-rank balancing state. */
+/* NLM / Local Consensus balancing state. */
 static float32_t modulation_index = 1.0F;
 static float32_t amplitude_offset = 1.0F;
 static float32_t angle = 0.0F;
-static const float32_t w0 = 2.0F * MMC_PI * f0;
 static float32_t modulation_signal_upper = 0.5F;
 static float32_t modulation_signal_lower = 0.5F;
 static float32_t number_of_connected_submodules_upper_arm = 0.0F;
 static float32_t number_of_connected_submodules_lower_arm = 0.0F;
 static float32_t i_upper_arm = 0.0F;
 static float32_t i_lowfilter_value = 0.0F;
-static float32_t local_rank_score[MMC_ARM_MODULES] = {0.0F};
+static float32_t local_consensus_score[MMC_ARM_MODULES] = {0.0F};
 static uint8_t gate_upper[MMC_ARM_MODULES] = {0U};
 
 static float32_t g_u_1 = 0.0F;
@@ -373,8 +177,8 @@ void reception_function(void);
 static inline float32_t mmc_modulo_2pi(float32_t value)
 {
 #if defined(MMC_HOST_BUILD)
-    float32_t out = fmodf(value, 2.0F * MMC_PI);
-    if (out < 0.0F) out += 2.0F * MMC_PI;
+    float32_t out = fmodf(value, 2.0F * MMC_PI_F);
+    if (out < 0.0F) out += 2.0F * MMC_PI_F;
     return out;
 #else
     return ot_modulo_2pi(value);
@@ -390,18 +194,6 @@ static inline float32_t mmc_sin(float32_t value)
 #endif
 }
 
-static inline float32_t mmc_clamp01(float32_t value)
-{
-    if (value < 0.0F) return 0.0F;
-    if (value > 1.0F) return 1.0F;
-    return value;
-}
-
-static inline float32_t mmc_smooth_sign(float32_t current)
-{
-    return tanhf(current / current_scale);
-}
-
 static inline uint8_t mmc_round_to_uint8(float32_t value)
 {
     if (value <= 0.0F) return 0U;
@@ -409,64 +201,8 @@ static inline uint8_t mmc_round_to_uint8(float32_t value)
     return static_cast<uint8_t>(value + 0.5F);
 }
 
-/* -------------- Local-rank balancing -------------------------- */
-static float32_t mmc_local_rank_priority(uint8_t local_index,
-                                         const float32_t *vc,
-                                         uint8_t n,
-                                         float32_t arm_current)
-{
-    const uint8_t prev_index = static_cast<uint8_t>((local_index + n - 1U) % n);
-    const uint8_t next_index = static_cast<uint8_t>((local_index + 1U) % n);
-
-    const float32_t vc_i = vc[local_index];
-    const float32_t vc_prev = vc[prev_index];
-    const float32_t vc_next = vc[next_index];
-
-    float32_t err = 0.5F * (vc_prev + vc_next) - vc_i;
-    if (fabsf(err) < voltage_deadband) err = 0.0F;
-
-    float32_t rank_score = 0.0F;
-    rank_score += (vc_i > vc_prev) ? 1.0F : 0.0F;
-    rank_score += (vc_i > vc_next) ? 1.0F : 0.0F;
-    const float32_t rank_centered = rank_score - 1.0F;
-
-    const float32_t dir = mmc_smooth_sign(arm_current);
-
-    /* Larger value means higher insertion priority. */
-    return (k_v * err * dir) - (k_rank * rank_centered * dir);
-}
-
-static void mmc_clear_gates(uint8_t *gates, uint8_t n)
-{
-    for (uint8_t i = 0; i < n; ++i) gates[i] = 0U;
-}
-
-static void mmc_select_top_priorities(const float32_t *priority,
-                                      uint8_t n,
-                                      uint8_t n_insert,
-                                      uint8_t *gates)
-{
-    mmc_clear_gates(gates, n);
-
-    for (uint8_t selected = 0; selected < n_insert; ++selected)
-    {
-        float32_t best_value = -1.0e30F;
-        uint8_t best_index = 0U;
-
-        for (uint8_t i = 0; i < n; ++i)
-        {
-            if ((gates[i] == 0U) && (priority[i] > best_value))
-            {
-                best_value = priority[i];
-                best_index = i;
-            }
-        }
-
-        gates[best_index] = 1U;
-    }
-}
-
-static void mmc_assign_upper_arm_gates_local_rank(uint8_t n_insert)
+/* -------------- Local Consensus gate assignment --------------- */
+static void mmc_assign_upper_arm_gates_local_consensus(uint8_t n_insert)
 {
     float32_t vc_upper[MMC_ARM_MODULES] = {0.0F};
 
@@ -477,10 +213,18 @@ static void mmc_assign_upper_arm_gates_local_rank(uint8_t n_insert)
 
     for (uint8_t i = 0; i < MMC_ARM_MODULES; ++i)
     {
-        local_rank_score[i] = mmc_local_rank_priority(i, vc_upper, MMC_ARM_MODULES, i_upper_arm);
+        local_consensus_score[i] = mmc_local_consensus_priority(
+            i,
+            vc_upper,
+            MMC_ARM_MODULES,
+            i_upper_arm);
     }
 
-    mmc_select_top_priorities(local_rank_score, MMC_ARM_MODULES, n_insert, gate_upper);
+    mmc_select_top_consensus_priorities(
+        local_consensus_score,
+        MMC_ARM_MODULES,
+        n_insert,
+        gate_upper);
 
     g_u_1 = static_cast<float32_t>(gate_upper[0]);
     g_u_2 = static_cast<float32_t>(gate_upper[1]);
@@ -492,9 +236,9 @@ static void mmc_assign_upper_arm_gates_local_rank(uint8_t n_insert)
 /* -------------- Measurement and safety ------------------------ */
 static uint8_t mmc_local_status_code()
 {
-    if (Cap_voltage > overvoltage_tolerance) return OVER_VOLTAGE;
-    if (Cap_voltage < undervoltage_tolerance) return UNDER_VOLTAGE;
-    if (fabsf(Arm_current) > overcurrent_tolerance) return OVER_CURRENT;
+    if (Cap_voltage > MMC_OVERVOLTAGE_LIMIT_V) return OVER_VOLTAGE;
+    if (Cap_voltage < MMC_UNDERVOLTAGE_LIMIT_V) return UNDER_VOLTAGE;
+    if (fabsf(Arm_current) > MMC_OVERCURRENT_LIMIT_A) return OVER_CURRENT;
     return (mode == POWERMODE) ? POWER : IDLE;
 }
 
@@ -624,7 +368,7 @@ void setup_routine()
     shield.power.setDutyCycleMin(ALL, 0.0F);
 
     uint32_t background_task_number = task.createBackground(loop_background_task);
-    task.createCritical(loop_critical_task, control_task_period_us);
+    task.createCritical(loop_critical_task, MMC_CONTROL_TASK_PERIOD_US);
 
     task.startBackground(background_task_number);
     task.startCritical();
@@ -675,7 +419,7 @@ void loop_communication_task()
     {
     case 'h':
         printk(" ________________________________________ \n"
-               "| ---- MMC local-rank control menu ---- |\n"
+               "| ---- MMC Local Consensus menu ------- |\n"
                "| press i : idle mode                   |\n"
                "| press p : power mode                  |\n"
                "| press r : record scope data           |\n"
@@ -732,7 +476,7 @@ void loop_background_task()
 /* -------------- Lead command-frame construction --------------- */
 static void mmc_build_lead_command_frame(uint8_t n_insert)
 {
-    mmc_assign_upper_arm_gates_local_rank(n_insert);
+    mmc_assign_upper_arm_gates_local_consensus(n_insert);
 
     dataTX_mmc.sm_insertion.raw = 0U;
     dataTX_mmc.status.raw = 0U;
@@ -843,7 +587,7 @@ int main()
     setup_routine();
     loop_critical_task();
 
-    std::printf("Local-rank gates: %u %u %u %u %u\n",
+    std::printf("Local Consensus gates: %u %u %u %u %u\n",
                 gate_upper[0], gate_upper[1], gate_upper[2], gate_upper[3], gate_upper[4]);
     return 0;
 }
