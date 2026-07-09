@@ -16,7 +16,7 @@ The repository was reorganized to follow the practical OwnTech Power API style:
 |---|---|
 | README | Rewritten around OwnTech + PlatformIO workflow. |
 | PlatformIO | Default `USB` environment, `STLink` option, Spin/Twist board parameters. |
-| Source entry | Added `src/main.cpp` with MMC IDs, status codes, frame helpers, and local-rank controller. |
+| Source entry | Added `src/main.cpp` with MMC IDs, status codes, frame helpers, and Local Consensus controller. |
 | OwnTech support | Added `owntech/pio_extra.ini` placeholder. |
 | App config | Added `src/app.ini` with `USB`, `STLink`, and `native` environments. |
 
@@ -33,7 +33,7 @@ src/
 ├── main.cpp
 ├── mmc_config.hpp
 ├── mmc_frame.hpp
-├── mmc_local_rank.hpp
+├── mmc_local_consensus.hpp
 ├── mmc_measurements.hpp
 └── mmc_tasks.cpp
 ```
