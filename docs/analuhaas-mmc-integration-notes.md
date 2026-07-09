@@ -19,7 +19,7 @@ The reference project uses an OwnTech Power API layout:
 
 ## Adaptation in this repository
 
-`src/main.cpp` was rewritten as a bridge between the Simulink local-rank controller and the OwnTech/Twist hardware workflow.
+`src/main.cpp` was rewritten as a bridge between the Simulink Local Consensus controller and the OwnTech/Twist hardware workflow.
 
 Implemented blocks:
 
@@ -35,13 +35,13 @@ Implemented blocks:
 5. RS485 reception/relay logic.
 6. Measurement update from Twist sensors.
 7. Lead-board NLM reference generation.
-8. Local-rank balancing priority based on neighbor capacitor voltages.
+8. Local Consensus balancing priority based on neighbor capacitor voltages.
 9. Follower-board command application.
 10. ScopeMimicry acquisition placeholders.
 
 ## Technical distinction
 
-The reference firmware uses capacitor-voltage sorting for CVB. This repository replaces that decision rule with local-rank / neighbor-consensus priority to match the Simulink control research direction.
+The reference firmware uses capacitor-voltage sorting for CVB. This repository replaces that decision rule with Local Consensus / neighbor-consensus priority to match the Simulink control research direction.
 
 ## Validation still required
 
