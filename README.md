@@ -1,6 +1,6 @@
-# MMC Local-Rank Neighbor Control
+# MMC Local-consensus  Neighbor Control
 
-OwnTech/PlatformIO-style research repository for a **Modular Multilevel Converter (MMC)** arm controller with **neighbor-consensus capacitor-voltage balancing** and a candidate **local-rank correction** layer.
+OwnTech/PlatformIO-style research repository for a **Modular Multilevel Converter (MMC)** arm controller with **neighbor-consensus capacitor-voltage balancing** and a candidate **local-consensus  correction** layer.
 
 This repository is organized to work like an OwnTech Power API project: the embedded entry point is `src/main.cpp`, board/shield configuration is in `platformio.ini`, application-specific configuration is in `src/app.ini`, and advanced board/Zephyr support is kept under `owntech/` and `zephyr/`.
 
@@ -30,7 +30,7 @@ MMC_phase_hackathon_circuit4_HAAS_Consensus1
 │   ├── app.ini                  Application configuration included by PlatformIO
 │   ├── mmc_config.hpp           MMC constants, module IDs, gains, safety limits
 │   ├── mmc_frame.hpp            RS485 frame packing/unpacking helpers
-│   ├── mmc_local_rank.hpp       Local-rank / neighbor-consensus helper functions
+│   ├── mmc_local_consensus .hpp       Local-consensus  / neighbor-consensus helper functions
 │   └── matlab/                  Extracted MATLAB controller source and tests
 ├── zephyr/                      Zephyr configuration placeholder
 ├── LICENSE
