@@ -2,7 +2,7 @@
 
 ## Current state
 
-This repository contains a professional structure for the MMC neighbor-consensus Simulink research model.
+This repository contains a professional structure for the MMC neighbor-consensus / Local Consensus Simulink research model and OwnTech/Twist firmware prototype.
 
 ## Completed
 
@@ -11,7 +11,8 @@ This repository contains a professional structure for the MMC neighbor-consensus
 - MATLAB / Simulink support files added.
 - Documentation folders prepared.
 - Extracted controller source prepared for version control.
-- Embedded and OwnTech placeholder structure prepared.
+- Embedded and OwnTech-style PlatformIO structure prepared.
+- Local Consensus C/C++ helper header added.
 
 ## Important technical finding
 
@@ -20,12 +21,13 @@ The uploaded Simulink model contains the local neighbor controller `hb_sm_local_
 ## Not completed in this environment
 
 - MATLAB/Simulink simulation was not executed here.
+- OwnTech/Zephyr/PlatformIO compilation was not executed here.
 - The binary `.slx` file should be uploaded from the local computer if it is not already present, because the available GitHub connector is optimized for UTF-8 text files.
 
 ## Recommended next branch
 
 ```text
-refactor/local-rank-correction-v1
+refactor/local-consensus-correction-v1
 ```
 
 ## Immediate next steps
@@ -34,4 +36,5 @@ refactor/local-rank-correction-v1
 2. Replace hardcoded neighbor indexing with a parameterized version.
 3. Move controller constants to `src/matlab/config/` or a Simulink data dictionary.
 4. Run nominal, imbalance, and load-step experiments.
-5. Export results to `results/`.
+5. Run `pio run -e native` locally to check C++ syntax.
+6. Export results to `results/`.
