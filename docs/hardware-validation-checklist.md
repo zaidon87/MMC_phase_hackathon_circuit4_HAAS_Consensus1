@@ -2,7 +2,7 @@
 
 ## Goal
 
-Validate the MMC local-rank neighbor-control firmware safely before applying significant power.
+Validate the MMC Local Consensus neighbor-control firmware safely before applying significant power.
 
 ## Phase 0 — Repository and build
 
@@ -10,7 +10,7 @@ Validate the MMC local-rank neighbor-control firmware safely before applying sig
 - [ ] `src/main.cpp` exists.
 - [ ] `src/mmc_config.hpp` exists.
 - [ ] `src/mmc_frame.hpp` exists.
-- [ ] `src/mmc_local_rank.hpp` exists.
+- [ ] `src/mmc_local_consensus.hpp` exists.
 - [ ] `pio run -e native` attempted.
 - [ ] `pio run -e USB` attempted.
 
@@ -59,8 +59,8 @@ Validate the MMC local-rank neighbor-control firmware safely before applying sig
 
 ## Phase 6 — Control validation
 
-- [ ] Capacitor voltage spread decreases with local-rank control.
-- [ ] Local-rank gate selection matches neighbor-voltage logic.
+- [ ] Capacitor voltage spread decreases with Local Consensus control.
+- [ ] Local Consensus gate selection matches neighbor-voltage logic.
 - [ ] Switching frequency does not become excessive.
 - [ ] Compare against centralized sorting baseline.
 - [ ] Export measurement traces for thesis/report.
