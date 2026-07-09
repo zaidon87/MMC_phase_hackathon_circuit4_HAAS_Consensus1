@@ -1,77 +1,121 @@
-# MMC Neighbor-Consensus Control
+# MMC Local-Rank Neighbor Control
 
-Professional research repository for a **Modular Multilevel Converter (MMC)** Simulink model implementing **neighbor-only capacitor-voltage balancing** for decentralized submodule control.
+OwnTech/PlatformIO-style research repository for a **Modular Multilevel Converter (MMC)** arm controller with **neighbor-consensus capacitor-voltage balancing** and a candidate **local-rank correction** layer.
 
-The repository follows the requested structure:
+This repository is organized to work like an OwnTech Power API project: the embedded entry point is `src/main.cpp`, board/shield configuration is in `platformio.ini`, application-specific configuration is in `src/app.ini`, and advanced board/Zephyr support is kept under `owntech/` and `zephyr/`.
+
+## Project objective
+
+The goal is to move from a Simulink-only MMC prototype toward a professional repository that can support:
+
+- MATLAB/Simulink model review,
+- extracted controller source-code review,
+- OwnTech/Twist embedded migration,
+- GitHub issue tracking,
+- reproducible documentation for PhD work and CARROTS-style experiments.
+
+## Repository layout
 
 ```text
-.github/ISSUE_TEMPLATE/      GitHub issue templates
-.vscode/                     VS Code / MATLAB-oriented workspace settings
-MMC_documentation/           Thesis-style model and control documentation
-MMC_models/                  Simulink model artifacts
-models/                      Model folder note and conventions
-owntech/                     OwnTech Twist / embedded hardware notes
-src/                         MATLAB controller source and embedded candidates
-zephyr/                      Zephyr placeholder configuration
-platformio.ini               PlatformIO placeholder for embedded experiments
+MMC_phase_hackathon_circuit4_HAAS_Consensus1
+├── .github/ISSUE_TEMPLATE/      GitHub issue templates for control, bugs, and features
+├── .vscode/                     VS Code settings for OwnTech + MATLAB work
+├── MMC_documentation/           Academic documentation and control notes
+├── MMC_models/                  Original and derived Simulink models
+├── docs/                        Repository, reproducibility, and roadmap notes
+├── models/                      Optional simplified / derived model folder
+├── owntech/                     OwnTech PlatformIO support placeholders
+├── src/
+│   ├── main.cpp                 OwnTech-style embedded entry point
+│   ├── app.ini                  Application configuration included by PlatformIO
+│   └── matlab/                  Extracted MATLAB controller source and tests
+├── zephyr/                      Zephyr configuration placeholder
+├── LICENSE
+├── platformio.ini
+└── README.md
 ```
 
-## Repository objective
+## Downloading the repository
 
-This project is intended to support PhD-level development and publication-quality review of a decentralized MMC control architecture. The current model uses a local neighbor-consensus principle: each submodule computes its balancing action from its own capacitor voltage, the previous neighbor voltage, and the next neighbor voltage.
-
-## Model included
-
-| Item | Value |
-|---|---|
-| Main Simulink file | `MMC_models/original/MMC_phase_hackathon_circuit4_HAAS_Consensus1.slx` |
-| MATLAB / Simulink release detected | R2024a |
-| Main control function detected | `hb_sm_local_ctrl_neighbor(...)` |
-| Neighbor lookup detected | `get_neighbors(...)` |
-| Current limitation | `get_neighbors` is hardcoded for `N = 5` in the uploaded model |
-
-## Control principle
-
-For each submodule `i`, the controller estimates the local capacitor-voltage error from the immediate neighbors:
-
-```matlab
-err = 0.5 * (Vc_prev + Vc_next) - Vc_i;
-dir = tanh(i_arm / Iscale);
-dm  = k_v * err * dir;
-m_i = min(max(m_arm + dm, 0.0), 1.0);
+```bash
+git clone https://github.com/zaidon87/MMC_phase_hackathon_circuit4_HAAS_Consensus1.git
+cd MMC_phase_hackathon_circuit4_HAAS_Consensus1
 ```
 
-This keeps the balancing law local and avoids a centralized sorting stage. The corrected continuous duty/modulation output can then be used by a downstream phase-shifted PWM block.
+Open the folder in VS Code and install the PlatformIO extension.
 
-## Quick start in MATLAB
+## Working with PlatformIO
+
+The repository follows the OwnTech-style workflow:
+
+```bash
+pio run
+pio run -e USB
+pio run -e STLink
+```
+
+The default environment is `USB`. The board/shield target is configured as:
+
+```ini
+board = spin
+board_version = 1_2_0
+board_shield = twist
+board_shield_version = 1_4_2
+```
+
+## Working with MATLAB / Simulink
+
+The original model should be placed here:
+
+```text
+MMC_models/original/MMC_phase_hackathon_circuit4_HAAS_Consensus1.slx
+```
+
+Then in MATLAB:
 
 ```matlab
-cd path/to/mmc-neighbor-consensus-control
 run('src/matlab/scripts/setup_path.m')
-run('src/matlab/scripts/open_model.m')
 run('src/matlab/tests/run_smoke_checks.m')
 ```
 
-To run a short simulation with fallback workspace variables:
+## Main control idea
+
+For submodule `i`, the local controller uses only neighbor capacitor voltages:
 
 ```matlab
-run('src/matlab/scripts/run_simulation.m')
+Vlocal_ref = 0.5 * (Vc_prev + Vc_next);
+err = Vlocal_ref - Vc_i;
+dir = tanh(i_arm / Iscale);
+dm = k_v * err * dir;
+m_i = min(max(m_arm + dm, 0.0), 1.0);
 ```
 
-## Development roadmap
+This avoids centralized global sorting and prepares the control law for distributed submodule implementation.
 
-The next professional development step is not to add more diagrams; it is to make the controller scalable and experimentally reproducible:
+## Embedded direction
 
-1. Replace hardcoded `N = 5` with a parameterized neighbor function.
-2. Move controller constants `k_v`, `deadband`, and `Iscale` to a parameter file or Simulink data dictionary.
-3. Add repeatable experiment scenarios: nominal, initial imbalance, load step, and switching-frequency comparison.
-4. Export capacitor-voltage traces, switching counters, THD, and loss metrics into `results/`.
-5. Prepare a short branch for publication: `refactor/local-rank-correction-v1`.
+`src/main.cpp` is an OwnTech-style skeleton. It contains:
 
-## Important note
+- OwnTech API includes,
+- board/module identification constants,
+- MMC status definitions,
+- compact communication frame structure,
+- capacitor-voltage/current encode-decode helpers,
+- placeholder setup/background/critical tasks,
+- local-rank correction function compatible with future hardware integration.
 
-The `.slx` file is binary. For professional GitHub review, the controller functions were extracted into source files under `src/matlab/` so that future changes can be reviewed line by line.
+## Important technical note
 
-## License and citation
+The uploaded Simulink model was detected as MATLAB/Simulink R2024a and contains a neighbor lookup currently hardcoded around `N = 5`. The repository includes a parameterized replacement under:
 
-Use `LICENSE` and `CITATION.cff` as starting points. Update author, supervisor, institution, and paper/thesis title before public release.
+```text
+src/matlab/utils/get_neighbors_parameterized.m
+```
+
+## Recommended next work
+
+1. Confirm the original `.slx` is committed under `MMC_models/original/`.
+2. Replace hardcoded neighbor lookup in Simulink with the parameterized implementation.
+3. Validate nominal, imbalance, and load-step experiments.
+4. Compare centralized sorting, neighbor consensus, and local-rank correction.
+5. Map the validated controller to `src/main.cpp` for OwnTech/Twist experiments.
