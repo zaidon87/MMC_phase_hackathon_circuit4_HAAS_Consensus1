@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it using the metadata below."
+title: "Neighbor-Consensus Control for Modular Multilevel Converter Submodules"
+authors:
+  - family-names: Jabbar
+    given-names: Zaid
+version: 0.2.0
+date-released: 2026-07-09
+repository-code: "https://github.com/zaidon87/MMC_phase_hackathon_circuit4_HAAS_Consensus1"
+keywords:
+  - modular multilevel converter
+  - decentralized control
+  - neighbor consensus
+  - capacitor voltage balancing
+  - Simulink
+license: MIT
