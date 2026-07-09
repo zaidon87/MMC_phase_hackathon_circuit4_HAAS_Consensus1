@@ -26,7 +26,7 @@ src/main.cpp
 src/app.ini
 src/mmc_config.hpp
 src/mmc_frame.hpp
-src/mmc_local_rank.hpp
+src/mmc_local_consensus.hpp
 owntech/pio_extra.ini
 platformio.ini
 ```
