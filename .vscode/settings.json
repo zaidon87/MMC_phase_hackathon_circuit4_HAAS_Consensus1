@@ -1,0 +1,17 @@
+{
+  "files.associations": {
+    "*.m": "matlab",
+    "*.slx": "plaintext",
+    "*.ini": "ini"
+  },
+  "files.exclude": {
+    "**/slprj": true,
+    "**/*.slxc": true,
+    "**/*_ert_rtw": true,
+    "**/*_grt_rtw": true,
+    "**/build": true,
+    "**/.pio": true
+  },
+  "editor.rulers": [100],
+  "markdown.validate.enabled": true
+}
