@@ -1,6 +1,6 @@
-# MMC Local-consensus  Neighbor Control
+# MMC Local Consensus Control
 
-OwnTech/PlatformIO-style research repository for a **Modular Multilevel Converter (MMC)** arm controller with **neighbor-consensus capacitor-voltage balancing** and a candidate **local-consensus  correction** layer.
+OwnTech/PlatformIO-style research repository for a **Modular Multilevel Converter (MMC)** arm controller with **neighbor-consensus capacitor-voltage balancing** and a **Local Consensus correction** layer.
 
 This repository is organized to work like an OwnTech Power API project: the embedded entry point is `src/main.cpp`, board/shield configuration is in `platformio.ini`, application-specific configuration is in `src/app.ini`, and advanced board/Zephyr support is kept under `owntech/` and `zephyr/`.
 
@@ -11,6 +11,8 @@ The goal is to move from a Simulink-only MMC prototype toward a professional rep
 - MATLAB/Simulink model review,
 - extracted controller source-code review,
 - OwnTech/Twist embedded migration,
+- GitHub issue tracking,
+- reproducible documentation for PhD work and CARROTS-style experiments.
 
 ## Repository layout
 
@@ -28,7 +30,7 @@ MMC_phase_hackathon_circuit4_HAAS_Consensus1
 │   ├── app.ini                  Application configuration included by PlatformIO
 │   ├── mmc_config.hpp           MMC constants, module IDs, gains, safety limits
 │   ├── mmc_frame.hpp            RS485 frame packing/unpacking helpers
-│   ├── mmc_local_consensus .hpp       Local-consensus  / neighbor-consensus helper functions
+│   ├── mmc_local_consensus.hpp  Local Consensus / neighbor-consensus helper functions
 │   └── matlab/                  Extracted MATLAB controller source and tests
 ├── zephyr/                      Zephyr configuration placeholder
 ├── LICENSE
@@ -88,7 +90,7 @@ run('src/matlab/tests/run_smoke_checks.m')
 
 ## Main control idea
 
-For submodule `i`, the local controller uses only neighbor capacitor voltages:
+For submodule `i`, the Local Consensus controller uses only neighbor capacitor voltages:
 
 ```matlab
 Vlocal_ref = 0.5 * (Vc_prev + Vc_next);
@@ -112,7 +114,7 @@ This avoids centralized global sorting and prepares the control law for distribu
 - RS485 reception and relay logic,
 - setup/background/critical tasks,
 - NLM reference generation,
-- local-consensus  gate selection for the upper arm,
+- Local Consensus gate selection for the upper arm,
 - safety transition logic.
 
 Reusable C/C++ pieces are also split into headers:
@@ -120,7 +122,7 @@ Reusable C/C++ pieces are also split into headers:
 ```text
 src/mmc_config.hpp
 src/mmc_frame.hpp
-src/mmc_local_rank.hpp
+src/mmc_local_consensus.hpp
 ```
 
 ## Important technical note
@@ -146,5 +148,5 @@ docs/analuhaas-mmc-integration-notes.md
 3. Run `pio run -e USB` inside the complete OwnTech environment.
 4. Replace hardcoded neighbor lookup in Simulink with the parameterized implementation.
 5. Validate nominal, imbalance, and load-step experiments.
-6. Compare centralized sorting, neighbor consensus, and local-rank correction.
+6. Compare centralized sorting, neighbor consensus, and Local Consensus.
 7. Test low-voltage hardware only after the checklist is complete.
