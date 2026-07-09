@@ -1,0 +1,45 @@
+# MATLAB / Simulink generated files
+*.asv
+*.autosave
+*.slxc
+*.mex*
+*.mexa64
+*.mexw64
+*.mlappinstall
+*.prj
+*.mltbx
+slprj/
+codegen/
+*_ert_rtw/
+*_grt_rtw/
+*_sfun.*
+*.log
+*.diary
+
+# Simulink cache and reports
+simulink_cache.xml
+reports/
+html/
+
+# Results - keep folder notes, ignore heavy raw files by default
+results/**/*.mat
+results/**/*.fig
+results/**/*.csv
+!results/**/README.md
+
+# Python / tooling
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# VS Code / OS
+.DS_Store
+Thumbs.db
+
+# PlatformIO
+.pio/
+
+# Zephyr build output
+build/
+zephyr/build/
