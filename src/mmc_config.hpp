@@ -45,9 +45,9 @@ constexpr float MMC_OVERCURRENT_LIMIT_A = 8.0F;
 constexpr float MMC_PI_F = 3.14159265358979323846F;
 constexpr uint32_t MMC_CONTROL_TASK_PERIOD_US = 100U;
 
-/* Local-rank / neighbor-consensus gains */
-constexpr float MMC_K_V = 0.2F;
-constexpr float MMC_K_RANK = 0.02F;
+/* Local Consensus / neighbor-consensus gains */
+constexpr float MMC_CONSENSUS_K_V = 0.2F;
+constexpr float MMC_CONSENSUS_K_NEIGHBOR_ORDER = 0.02F;
 constexpr float MMC_VOLTAGE_DEADBAND_V = 0.1F;
 constexpr float MMC_CURRENT_SCALE_A = 1.0F;
 
