@@ -23,7 +23,7 @@ m = hb_sm_local_ctrl_neighbor(1, 0.5, 1.0, Vc, 14, 11, 5);
 assert(m >= 0 && m <= 1, 'Controller output must be clamped in [0,1].');
 
 params = mmc_default_control_params();
-m2 = hb_sm_local_rank_correction_v1(1, 0.5, 1.0, Vc, 14, 11, 5, params);
-assert(m2 >= 0 && m2 <= 1, 'Local-rank controller output must be clamped in [0,1].');
+m2 = hb_sm_local_consensus_correction_v1(1, 0.5, 1.0, Vc, 14, 11, 5, params);
+assert(m2 >= 0 && m2 <= 1, 'Local Consensus controller output must be clamped in [0,1].');
 
 fprintf('Smoke checks passed.\n');
