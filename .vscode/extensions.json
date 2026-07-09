@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "mathworks.language-matlab",
+    "yzhang.markdown-all-in-one",
+    "ms-vscode.cpptools",
+    "platformio.platformio-ide"
+  ]
+}
