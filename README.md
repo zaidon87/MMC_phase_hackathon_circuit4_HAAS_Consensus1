@@ -11,8 +11,6 @@ The goal is to move from a Simulink-only MMC prototype toward a professional rep
 - MATLAB/Simulink model review,
 - extracted controller source-code review,
 - OwnTech/Twist embedded migration,
-- GitHub issue tracking,
-- reproducible documentation for PhD work and CARROTS-style experiments.
 
 ## Repository layout
 
