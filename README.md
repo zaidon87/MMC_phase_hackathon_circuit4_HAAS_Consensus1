@@ -131,20 +131,8 @@ The uploaded Simulink model was detected as MATLAB/Simulink R2024a and contains 
 src/matlab/utils/get_neighbors_parameterized.m
 ```
 
-## Validation documents
-
-```text
-docs/build-and-test-owntech.md
-docs/hardware-validation-checklist.md
-docs/analuhaas-mmc-integration-notes.md
-```
 
 ## Recommended next work
 
-1. Confirm the original `.slx` is committed under `MMC_models/original/`.
-2. Run `pio run -e native` to catch basic C++ syntax issues.
-3. Run `pio run -e USB` inside the complete OwnTech environment.
-4. Replace hardcoded neighbor lookup in Simulink with the parameterized implementation.
-5. Validate nominal, imbalance, and load-step experiments.
-6. Compare centralized sorting, neighbor consensus, and Local Consensus.
-7. Test low-voltage hardware only after the checklist is complete.
+1. Run `pio run -e USB` inside the complete OwnTech environment.
+
