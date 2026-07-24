@@ -132,7 +132,5 @@ src/matlab/utils/get_neighbors_parameterized.m
 ```
 
 
-## Recommended next work
 
-1. Run `pio run -e USB` inside the complete OwnTech environment.
 
